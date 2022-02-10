@@ -1,5 +1,7 @@
 "use strict";
 
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
@@ -22,13 +24,11 @@ exports.timeAgo = timeAgo;
 exports.toThousandslsFilter = toThousandslsFilter;
 exports.uppercase = exports.translate = void 0;
 
+var _typeof2 = _interopRequireDefault(require("@babel/runtime/helpers/typeof"));
+
 var _moment = _interopRequireDefault(require("moment"));
 
 var _i18n = require("../i18n");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
 /**
  * 翻译过滤器
@@ -217,7 +217,7 @@ function parseTime(time, cFormat) {
   var format = cFormat || '{y}-{m}-{d} {h}:{i}:{s}';
   var date;
 
-  if (_typeof(time) === 'object') {
+  if ((0, _typeof2.default)(time) === 'object') {
     date = time;
   } else {
     date = new Date(parseInt(time));

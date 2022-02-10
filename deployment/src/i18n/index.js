@@ -1,5 +1,7 @@
 "use strict";
 
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
@@ -8,8 +10,6 @@ exports.setLang = exports.i18n = void 0;
 var _vue = _interopRequireDefault(require("vue"));
 
 var _vueI18n = _interopRequireDefault(require("vue-i18n"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // 国际化
 _vue.default.use(_vueI18n.default);

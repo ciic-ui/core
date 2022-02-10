@@ -1,13 +1,15 @@
 "use strict";
 
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.RegExpUtil = void 0;
 
-var _RegExpUtil;
+var _defineProperty2 = _interopRequireDefault(require("@babel/runtime/helpers/defineProperty"));
 
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var _RegExpUtil;
 
 var RegExpUtil = (_RegExpUtil = {
   name: {
@@ -62,31 +64,31 @@ var RegExpUtil = (_RegExpUtil = {
     trigger: 'blur',
     message: '请输入非负数字'
   }
-}, _defineProperty(_RegExpUtil, "name", {
+}, (0, _defineProperty2.default)(_RegExpUtil, "name", {
   pattern: /^[\u4e00-\u9fa5]{2,6}$/,
   trigger: 'blur',
   message: '请输入正确的名字'
-}), _defineProperty(_RegExpUtil, "numOrLetter", {
+}), (0, _defineProperty2.default)(_RegExpUtil, "numOrLetter", {
   pattern: /^[a-zA-Z0-9]*$/,
   trigger: 'blur',
   message: '请输入正确的名字'
-}), _defineProperty(_RegExpUtil, "inputLength", {
+}), (0, _defineProperty2.default)(_RegExpUtil, "inputLength", {
   pattern: /^[\S]{1,20}$/,
   trigger: 'blur',
   message: '请输入20字以内'
-}), _defineProperty(_RegExpUtil, "textareaLength", {
+}), (0, _defineProperty2.default)(_RegExpUtil, "textareaLength", {
   pattern: /^[\S]{1,150}$/,
   trigger: 'blur',
   message: '请输入150字以内'
-}), _defineProperty(_RegExpUtil, "inputCode", {
+}), (0, _defineProperty2.default)(_RegExpUtil, "inputCode", {
   pattern: /^[A-Za-z0-9]+$/,
   trigger: "blur",
   message: "请输入字母和数字"
-}), _defineProperty(_RegExpUtil, "proportion", {
+}), (0, _defineProperty2.default)(_RegExpUtil, "proportion", {
   pattern: /^([1-9]?\d|100)%$/,
   trigger: 'blur',
   message: '请输入0-100的百分号数字'
-}), _defineProperty(_RegExpUtil, "textareaLengths", {
+}), (0, _defineProperty2.default)(_RegExpUtil, "textareaLengths", {
   pattern: /^[\S]{1,300}$/,
   trigger: 'blur',
   message: '请输入300字以内'

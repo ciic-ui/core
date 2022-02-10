@@ -46,7 +46,7 @@ gulp.task('dev:copyfiles', function () {
     const sourceFiles = [
         'deployment/**/*'
     ];
-    const destination = devPath + '/node_modules/@ciic/core/';
+    const destination = devPath + '/node_modules/@ciic/core';
     return gulp.src(sourceFiles, {
         base: "./deployment"
     }).pipe(gulp.dest(destination));

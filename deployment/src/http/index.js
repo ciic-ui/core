@@ -1,28 +1,41 @@
 "use strict";
 
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = void 0;
 
+var _regenerator = _interopRequireDefault(require("@babel/runtime/regenerator"));
+
+var _asyncToGenerator2 = _interopRequireDefault(require("@babel/runtime/helpers/asyncToGenerator"));
+
 var _vue = _interopRequireDefault(require("vue"));
 
 var _axios = _interopRequireDefault(require("axios"));
 
+var _router = _interopRequireDefault(require("../router"));
+
 var _store = _interopRequireDefault(require("../store"));
+
+var _errorCode = _interopRequireDefault(require("../code/errorCode"));
+
+var _mock = _interopRequireDefault(require("../api/mock"));
 
 var _i18n = _interopRequireDefault(require("../i18n"));
 
-var _common = require("../utils/common");
+var _common = _interopRequireDefault(require("../const/common.js"));
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _store2 = require("../utils/store");
 
-var PRIORITY_GROUP = process.env.PRIORITY_GROUP || 'default'; // import NProgress from 'nprogress'
-// import { Notification } from 'element-ui';
-
-var requestContinue = 100; // 超时时间
-
-_axios.default.defaults.timeout = 300000; // 跨域请求，允许保存cookie
+/**
+ *
+ * http配置
+ *
+ */
+// 超时时间
+_axios.default.defaults.timeout = 30000; // 跨域请求，允许保存cookie
 
 _axios.default.defaults.withCredentials = true; // 重新请求标志位，避免无限循环请求
 
@@ -30,34 +43,50 @@ _axios.default.defaults.isRetryRequest = false;
 
 _axios.default.defaults.validateStatus = function validateStatus(status) {
   return /^(2|3)\d{2}$/.test(status) || status === 401;
-}; // HTTPrequest拦截
+}; // 刷新token的状态 0-未刷新 1-正在刷新 2-刷新失败
+
+
+var refreshingTokenStatus = 0;
+/**
+ * 错误处理，自动跳转登录页并提示
+ */
+
+function toLogin() {
+  // 清除缓存
+  _store.default.commit("SET_USER_INFO", {});
+
+  _store.default.commit("SET_ACCESS_TOKEN", "");
+
+  _store.default.commit("SET_REFRESH_TOKEN", "");
+
+  _store.default.commit("SET_ROLES", []);
+
+  _store.default.commit("SET_MENU_ROUTERS", []);
+
+  _store.default.commit("SET_MENU", []);
+
+  _store.default.commit("DEL_ALL_TAG");
+
+  localStorage.removeItem('insightDicts');
+
+  _router.default.push({
+    path: '/login'
+  });
+} // HTTPrequest拦截
 
 
 _axios.default.interceptors.request.use(function (config) {
-  config.headers['Accept-Language'] = _i18n.default.locale; // 添加优先路由的 header 标记 ，需要配合网关和服务注册元数据
+  var GROUP_NAME = (0, _store2.getStore)({
+    name: "GROUP_NAME"
+  });
+  config.headers['Accept-Language'] = _i18n.default.locale; //后端请求优先级配置项
 
-  console.info('请求会优先路由至配有spring.cloud.nacos.discovery.metadata.priority_group={} 的服务节点', PRIORITY_GROUP);
-  config.headers['priority_group'] = PRIORITY_GROUP;
+  config.headers['Priority-Value'] = GROUP_NAME ? GROUP_NAME : 'default'; //  if(config.url != '../serverConfig.yml'){
+  // 设置请求默认前缀
 
-  if (config.url != '../serverConfig.yml') {
-    // 设置请求默认前缀
-    _axios.default.defaults.baseURL = config.url;
-  } // NProgress.start() // start progress bar
-
-
-  var _store$getters = _store.default.getters,
-      requestCount = _store$getters.requestCount,
-      prevRequsetEndTime = _store$getters.prevRequsetEndTime,
-      requestEndTimer = _store$getters.requestEndTimer;
-  var nowTime = +new Date();
-
-  if (nowTime - prevRequsetEndTime < requestContinue) {
-    clearTimeout(requestEndTimer);
-  } else if (requestCount === 0) {
-    _store.default.commit('SET_LOADING', true);
-  }
-
-  _store.default.commit('ADD_REQUEST_COUNT');
+  var baseApi = _common.default.serverConfig ? _common.default.serverConfig.baseApi : '';
+  config.baseURL = baseApi; //  }
+  // NProgress.start() // start progress bar
 
   if (_store.default.getters.accessToken) {
     if (!config.headers.Authorization) {
@@ -66,91 +95,97 @@ _axios.default.interceptors.request.use(function (config) {
     }
   }
 
-  return config;
-}, function (error) {
-  _store.default.commit("SUBTRACT_REQUEST_COUNT");
+  if (_mock.default.enabled && process.env.NODE_ENV === 'development') {
+    var proxy = _mock.default.proxy;
 
-  var requestCount = _store.default.getters.requestCount;
-
-  if (requestCount === 0) {
-    var timer = setTimeout(function () {
-      _store.default.commit('SET_LOADING', false);
-    }, requestContinue);
-
-    _store.default.commit('SET_REQUEST_END_TIMER', timer);
+    for (var i = 0; i < proxy.length; i++) {
+      // 匹配到需要mock的接口，替换服务端地址为mock服务器地址
+      if (proxy[i].url === config.url && proxy[i].method === config.method) {
+        config.baseURL = _mock.default.apiPPrefix + _mock.default.repositoryId;
+        break;
+      }
+    }
   }
 
+  return config;
+}, function (error) {
   return Promise.reject(error);
 }); // HTTPresponse拦截
 
 
-_axios.default.interceptors.response.use(function (data) {
-  var resultData = data;
-  var _data$data = data.data,
-      msg = _data$data.msg,
-      code = _data$data.code;
-  var status = data.status,
-      config = data.config;
-  var message = data.data.msg || '未知错误'; // NProgress.done()
+_axios.default.interceptors.response.use( /*#__PURE__*/function () {
+  var _ref = (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee(data) {
+    var resultData, _data$data, msg, code, status, config, message;
 
-  _store.default.commit("SUBTRACT_REQUEST_COUNT");
+    return _regenerator.default.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            resultData = data;
+            _data$data = data.data, msg = _data$data.msg, code = _data$data.code;
+            status = data.status, config = data.config;
+            message = data.data.msg || '未知错误';
 
-  _store.default.commit('SET_PREV_REQUEST_END_TIME', +new Date());
+            if (!(status === 401)) {
+              _context.next = 9;
+              break;
+            }
 
-  var requestCount = _store.default.getters.requestCount;
+            _store.default.dispatch("setRelogin", true);
 
-  if (requestCount === 0) {
-    var timer = setTimeout(function () {
-      _store.default.commit('SET_LOADING', false);
-    }, requestContinue);
+            toLogin();
+            _context.next = 16;
+            break;
 
-    _store.default.commit('SET_REQUEST_END_TIMER', timer);
-  }
+          case 9:
+            if (!(status === 200)) {
+              _context.next = 14;
+              break;
+            }
 
-  if (status === 401) {
-    _store.default.dispatch("setRelogin", true);
+            if (Number(code) > 0) {
+              // fxd 修改 解决导入时的消息提示问题
+              if (!(msg && msg.indexOf('文件导入失败') != '-1')) {
+                if (Number(code) == 204) {//流程定义key不存在时不出提示
+                } else {
+                  _vue.default.prototype.$message.error({
+                    dangerouslyUseHTMLString: true,
+                    message: msg || _errorCode.default.default,
+                    duration: 3500
+                  });
+                }
+              }
+            }
 
-    (0, _common.toLogin)();
-  } else {
-    if (status === 200) {
-      if (Number(code) > 0) {
-        // fxd 修改 解决导入时的消息提示问题
-        if (!msg || msg && msg.indexOf('文件导入失败') == '-1') {// Notification.error({
-          //     title: '错误',
-          //     message: status + ':' + message
-          // })
+            return _context.abrupt("return", resultData);
+
+          case 14:
+            _vue.default.prototype.$message.error({
+              message: message
+            });
+
+            return _context.abrupt("return", resultData);
+
+          case 16:
+          case "end":
+            return _context.stop();
         }
       }
+    }, _callee);
+  }));
 
-      return resultData;
-    } else {
-      // Notification.error({
-      //     title: '错误',
-      //     message: status + ':' + message
-      // })
-      return resultData;
-    }
-  }
-}, function (error) {
-  _store.default.commit("SUBTRACT_REQUEST_COUNT");
-
-  var requestCount = _store.default.getters.requestCount;
-
-  if (requestCount === 0) {
-    var timer = setTimeout(function () {
-      _store.default.commit('SET_LOADING', false);
-    }, requestContinue);
-
-    _store.default.commit('SET_REQUEST_END_TIMER', timer);
-  }
-
+  return function (_x) {
+    return _ref.apply(this, arguments);
+  };
+}(), function (error) {
   if (error && error.response) {
     var status = error.response.status;
 
-    if (status) {// Notification.error({
-      //     title: '错误',
-      //     message: status + ':' + errorCode.default
-      // })
+    if (status) {
+      _vue.default.prototype.$message.error({
+        message: _errorCode.default[status] || _errorCode.default.default,
+        duration: 3500
+      });
     }
   }
 
