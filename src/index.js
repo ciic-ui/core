@@ -5,6 +5,7 @@ import * as Http from './http';
 import I18n from './i18n';
 import * as Store from './store';
 import * as Utils from './utils'
+import * as Const from './const'
 
 export {
     Store,
@@ -13,5 +14,5 @@ export {
     Core,
     Http,
     Utils,
-    Code
+    Code, Const
 }

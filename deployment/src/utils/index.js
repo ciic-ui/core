@@ -11,7 +11,7 @@ var commonUtil = _interopRequireWildcard(require("./common"));
 
 exports.commonUtil = commonUtil;
 
-var util = _interopRequireWildcard(require("./util"));
+var util = _interopRequireWildcard(require("./util.js"));
 
 exports.util = util;
 
