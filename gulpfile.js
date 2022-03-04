@@ -2,8 +2,8 @@ const gulp = require('gulp');
 const clean = require('gulp-clean');
 const exec = require('child_process').exec;
 
-// const devPath = '/Users/mac/test'
-const devPath = '/Users/mac/ciic-ui'
+const devPath = '/Users/mac/test'
+// const devPath = '/Users/mac/ciic-ui'
 
 gulp.task('clean', function () {
     return gulp.src([

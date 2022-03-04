@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.OrgUploadFileFroCicc = void 0;
+exports.downTemplate = downTemplate;
 exports.getDownLoadOrgFileFroCiic = getDownLoadOrgFileFroCiic;
 
 var _http = _interopRequireDefault(require("../http"));
@@ -30,5 +31,23 @@ function getDownLoadOrgFileFroCiic(url, contentId) {
     url: url + "/".concat(contentId),
     method: 'get',
     responseType: 'arraybuffer'
+  });
+}
+/*
+* downUrl和uploadUrl 都是 服务名+ 接口地址
+* let calUrl = '/ciic-ihr-salary-service'
+* eq: calUrl + `/mvc/WageTotalBudget/template`,
+* */
+//下载导入模板
+
+
+function downTemplate(downUrl, methods) {
+  return (0, _http.default)({
+    url: downUrl,
+    method: methods ? methods : 'get',
+    responseType: 'arraybuffer',
+    header: {
+      contentType: 'application/octet-stream; charset=utf-8'
+    }
   });
 }

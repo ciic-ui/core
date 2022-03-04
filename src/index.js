@@ -6,6 +6,7 @@ import I18n from './i18n';
 import * as Store from './store';
 import * as Utils from './utils'
 import * as Const from './const'
+import * as Api from './api'
 
 export {
     Store,
@@ -14,5 +15,6 @@ export {
     Core,
     Http,
     Utils,
-    Code, Const
+    Code, Const,
+    Api
 }
