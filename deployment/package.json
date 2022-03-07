@@ -1,6 +1,6 @@
 {
   "name": "@ciic/core",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "ciic项目基础核心包",
   "main": "src/index.js",
   "author": "ciic",

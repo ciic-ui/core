@@ -38,3 +38,13 @@ export function downTemplate(downUrl, methods) {
     }
   });
 }
+
+// 导入上传接口地址
+
+export function uploadBnfFile(data, uploadUrl) {
+  return request({
+    url: uploadUrl,
+    method: 'post',
+    data: data,
+  });
+}
