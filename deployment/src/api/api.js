@@ -8,6 +8,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.OrgUploadFileFroCicc = void 0;
 exports.downTemplate = downTemplate;
 exports.getDownLoadOrgFileFroCiic = getDownLoadOrgFileFroCiic;
+exports.uploadBnfFile = uploadBnfFile;
 
 var _http = _interopRequireDefault(require("../http"));
 
@@ -49,5 +50,14 @@ function downTemplate(downUrl, methods) {
     header: {
       contentType: 'application/octet-stream; charset=utf-8'
     }
+  });
+} // 导入上传接口地址
+
+
+function uploadBnfFile(data, uploadUrl) {
+  return (0, _http.default)({
+    url: uploadUrl,
+    method: 'post',
+    data: data
   });
 }
