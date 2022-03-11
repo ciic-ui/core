@@ -5,35 +5,42 @@ var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefau
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.store = exports.register = void 0;
 
 var _vue = _interopRequireDefault(require("vue"));
 
 var _vuex = _interopRequireDefault(require("vuex"));
 
-var _user = _interopRequireDefault(require("./modules/user"));
-
-var _common = _interopRequireDefault(require("./modules/common"));
-
-var _impData = _interopRequireDefault(require("./modules/impData"));
-
-var _tags = _interopRequireDefault(require("./modules/tags"));
-
-var _screen = _interopRequireDefault(require("./modules/screen"));
-
-var _getters = _interopRequireDefault(require("./getters"));
+var _storage = require("../core/storage");
 
 _vue.default.use(_vuex.default);
 
-var _default = new _vuex.default.Store({
-  modules: {
-    user: _user.default,
-    common: _common.default,
-    tags: _tags.default,
-    screen: _screen.default,
-    impData: _impData.default
+var store = new _vuex.default.Store({
+  state: {
+    accessToken: '',
+    httpCount: 0,
+    loadding: false,
+    siteConfig: {}
   },
-  getters: _getters.default
-});
+  mutations: {
+    SET_ACCESS_TOKEN: function SET_ACCESS_TOKEN(state, accessToken) {
+      state.accessToken = accessToken;
 
-exports.default = _default;
+      _storage.session.setItem('accessToken', state.accessToken);
+    },
+    SET_HTTPCOUNT: function SET_HTTPCOUNT(state, data) {
+      state.httpCount = data;
+    },
+    SET_LOADING: function SET_LOADING(state, data) {
+      state.loadding = !!data;
+    }
+  },
+  getters: {}
+});
+exports.store = store;
+
+var register = function register(path, module, moduleOptions) {
+  store.registerModule(path, module, moduleOptions);
+};
+
+exports.register = register;

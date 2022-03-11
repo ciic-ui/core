@@ -1,128 +1,373 @@
+import Vue from 'vue';
+import axios from 'axios';
+import {
+  store
+} from '../store';
+// import NProgress from "nprogress";
+import { Notification, Loading } from 'element-ui';
 /**
- *
- * http配置
- *
+ * 根据API配置生成URL
+ * @param api API配置
+ * @returns 返回拼接好的完整URL
  */
- import Vue from 'vue';
- import axios from 'axios';
- import router from '../router';
- import store from '../store';
- import errorCode from '../code/errorCode';
- import mock from '../api/mock';
- import i18n from '../i18n'
- import comConst from '../const/common.js'
- import {getStore} from "../utils/store";
+const getUrlByApi = api => {
+  let url = '';
+  if (typeof api === 'string') {
+    url = '/api' + api
+  }
+  return url;
+}
 
- // 超时时间
- axios.defaults.timeout = 30000;
- // 跨域请求，允许保存cookie
- axios.defaults.withCredentials = true;
- // 重新请求标志位，避免无限循环请求
- axios.defaults.isRetryRequest = false;
-
- axios.defaults.validateStatus = function validateStatus(status) {
-   return /^(2|3)\d{2}$/.test(status) || status === 401;
- };
-
- // 刷新token的状态 0-未刷新 1-正在刷新 2-刷新失败
- let refreshingTokenStatus = 0;
+//请求的数据是放在body里的
+const methodBodyList = ['post', 'put', 'patch']
 
 
+const http = (api, data, httpOptions) => {
+  const isMobile = window.innerWidth < 576 ? true : false
+  let url = getUrlByApi(api);
+  let method = 'get';
+  if (typeof api == 'object' && api['method']) {
+    method = api['method'] || 'get';
+  }
 
- /**
-  * 错误处理，自动跳转登录页并提示
-  */
- function toLogin(){
-   // 清除缓存
-   store.commit("SET_USER_INFO", {});
-   store.commit("SET_ACCESS_TOKEN", "");
-   store.commit("SET_REFRESH_TOKEN", "");
-   store.commit("SET_ROLES", []);
-   store.commit("SET_MENU_ROUTERS", []);
-   store.commit("SET_MENU", []);
-   store.commit("DEL_ALL_TAG");
-   localStorage.removeItem('insightDicts');
-   router.push({ path: '/login' });
- }
+  if (httpOptions === true) {
+    httpOptions = {
+      wrapBody: 'request'
+    }
+  }
+
+  if (!httpOptions) httpOptions = {};
+
+  let axiosConfig = httpOptions.AxiosRequestConfig;
+  if (!axiosConfig) {
+    httpOptions.AxiosRequestConfig = {};
+    axiosConfig = httpOptions.AxiosRequestConfig
+  }
+
+  let isDataBody = methodBodyList.includes(method.toLowerCase());
+  const user = store.state.user;
+  let timestamp = Date.now();
+
+  let ciicHeaders = {
+    'Content-Type': 'application/json;charset=utf-8',
+    timestamp,
+  };
 
 
- // HTTPrequest拦截
- axios.interceptors.request.use((config) => {
-   let GROUP_NAME = getStore({
-     name: "GROUP_NAME"
-   })
-   config.headers['Accept-Language'] = i18n.locale
-   //后端请求优先级配置项
-   config.headers['Priority-Value'] = GROUP_NAME?GROUP_NAME:'default'
-  //  if(config.url != '../serverConfig.yml'){
-     // 设置请求默认前缀
-     let baseApi = comConst.serverConfig ? comConst.serverConfig.baseApi : ''
-     config.baseURL = baseApi;
-  //  }
-   // NProgress.start() // start progress bar
-   if (store.getters.accessToken) {
-     if (!config.headers.Authorization) {
-       // 让每个请求携带token--['X-Token']为自定义key 请根据实际情况自行修改
-       config.headers.Authorization = `Bearer ${store.getters.accessToken}`;
-     }
-   }
-   if (mock.enabled && process.env.NODE_ENV === 'development'){
-     const proxy = mock.proxy;
-     for (let i = 0; i < proxy.length; i++) {
-       // 匹配到需要mock的接口，替换服务端地址为mock服务器地址
-       if(proxy[i].url === config.url && proxy[i].method === config.method) {
-         config.baseURL  = mock.apiPPrefix + mock.repositoryId;
-         break;
-       }
-     }
-   }
-   return config;
- }, error => Promise.reject(error));
+  if (user) {
+    ciicHeaders['Authorization'] = user.accessToken || "";
+  }
 
- // HTTPresponse拦截
- axios.interceptors.response.use(async (data) => {
-   let resultData = data;
-   const { msg, code } = data.data;
-   const { status, config } = data;
-   const message = data.data.msg || '未知错误';
-   if (status === 401){
-       store.dispatch("setRelogin", true);
-       toLogin()
-   }else{
-     if(status === 200) {
-       if(Number(code) > 0) {
-         // fxd 修改 解决导入时的消息提示问题
-         if(!(msg && (msg.indexOf('文件导入失败') != '-1'))){
-           if(Number(code)==204){//流程定义key不存在时不出提示
 
-           }else{
-            Vue.prototype.$message.error({
-              dangerouslyUseHTMLString: true,
-              message: msg || errorCode.default,
-              duration: 3500,
-            });
-           }
+  axiosConfig.headers = {
+    ...ciicHeaders,
+    ...axiosConfig.headers
+  }
 
-         }
-       }
-       return resultData;
-     }else {
-       Vue.prototype.$message.error({
-         message: message,
-       })
-       return resultData
-     }
-   }
- }, (error) => {
-   if (error && error.response) {
-     const { status } = error.response;
-     if (status) {
-       Vue.prototype.$message.error({
-         message: errorCode[status] || errorCode.default,
-         duration: 3500,
-       });
-     }
-   }
-   return Promise.reject(new Error(error));
- });
- export default axios;
+  if (store.state.httpCount <= 0) {
+    if (!httpOptions.loadingDisabled) {
+      if (Vue['$Loading']) {
+        Vue['$Loading'].start();
+        // if (isMobile) {
+        //     Toast.loading({
+        //         Notification: '加载中...',
+        //         forbidClick: true,
+        //         duration: 0
+        //     });
+        // } else {
+        //     NProgress.start();
+        // }
+      }
+
+    }
+  }
+
+  store.commit('SET_HTTPCOUNT', store.state.httpCount + 1);
+  store.commit('SET_LOADING', true);
+
+  if (isDataBody && httpOptions.wrapBody) {
+    if (typeof httpOptions.wrapBody === 'string') {
+      data = {
+        [httpOptions.wrapBody]: data
+      }
+    } else {
+      data = {
+        request: data
+      }
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    axios({
+      ...httpOptions.AxiosRequestConfig,
+      url,
+      method,
+      params: isDataBody ? null : data,
+      data: isDataBody ? data : null,
+      timeout: (store.state.siteConfig.Timeout * 1000) || 999999
+    }).then(res => {
+      if (httpOptions.isNotCIIC) { //如果是外部接口的话直接返回
+        resolve(res.data);
+      } else {
+        if (res.data.Data !== undefined && res.data.IsSuccess === true) {
+          resolve(res.data.Data)
+        } else {
+          exceptionHandler(res.data.ErrorList, httpOptions.handleError, httpOptions.async, resolve, reject, isMobile);
+        }
+      }
+    }).catch(err => {
+      exceptionHandler(err, httpOptions.handleError, httpOptions.async, resolve, reject, isMobile);
+    }).finally(() => {
+      let count = store.state.httpCount - 1;
+      store.commit('SET_HTTPCOUNT', count);
+      if (count <= 0) {
+        store.commit('SET_LOADING', false);
+        if (!httpOptions.loadingDisabled) {
+          if (Vue['$Loading']) {
+            Vue['$Loading'].done()
+          }
+        }
+      }
+    })
+  })
+}
+
+
+const exceptionTitle = '请求错误';
+
+/**
+ * 
+ * @param error 错误示例
+ * @param handError 是否处理错误
+ * @param asyncFlag 是否支持同步
+ * @param resolve 正确处理函数
+ * @param reject 错误处理函数
+ */
+const exceptionHandler = (error, handError, asyncFlag, resolve, reject, isMobile) => {
+  if (handError !== false) { //如果需要错误处理
+    if (typeof error === 'string') {
+      if (Vue['$Notification']) {
+        Vue['$Notification'].error({
+          title: exceptionTitle,
+          message: error,
+        })
+      }
+      // if (isMobile) {
+      //     Notify({ type: 'danger', Notification: error });
+      // } else {
+      //     notification.error({
+      //         Notification: exceptionTitle,
+      //         message: error,
+      //     })
+      // }
+    } else if (typeof error === 'object') {
+      if (Array.isArray(error)) {
+        if (error.length > 0) {
+          if (error[0].Code === '400' && error[0].Msg.includes('-token')) {
+            window.localStorage.clear()
+            window.sessionStorage.clear()
+            window.location.href = window.location.href
+          } else {
+            if (Vue['$Notification']) {
+              Vue['$Notification'].error({
+                title: error[0].Code || exceptionTitle,
+                message: error[0].Msg || error[0].Code || '其他错误',
+              })
+            }
+          }
+
+          // if (isMobile) {
+          //     Notify({ type: 'danger', Notification: error[0].Msg || error[0].Code || '其他错误' });
+          // } else {
+          //     notification.error({
+          //         Notification: error[0].Code || exceptionTitle,
+          //         message: error[0].Msg || error[0].Code || '其他错误',
+          //     })
+          // }
+        } else {
+
+          if (Vue['$Notification']) {
+            Vue['$Notification'].error({
+              title: exceptionTitle,
+              message: '未知错误',
+            })
+          }
+          // if (isMobile) {
+          //     Notify({ type: 'danger', Notification: '未知错误' });
+          // } else {
+          //     notification.error({
+          //         Notification: exceptionTitle,
+          //         message: '未知错误',
+          //     })
+          // }
+        }
+      } else {
+
+        if (Vue['$Notification']) {
+          Vue['$Notification'].error({
+            title: error.Code || exceptionTitle,
+            message: error.Notification || JSON.stringify(error) || "网络请求失败",
+          })
+        }
+
+        // if (isMobile) {
+        //     Notify({ type: 'danger', Notification: error.Notification || JSON.stringify(error) || "网络请求失败" });
+        // } else {
+        //     notification.error({
+        //         Notification: error.Code || exceptionTitle,
+        //         message: error.Notification || JSON.stringify(error) || "网络请求失败",
+        //     })
+        // }
+      }
+    } else {
+      if (Vue['$Notification']) {
+        Vue['$Notification'].error({
+          title: error.Code || exceptionTitle,
+          message: error.Notification || JSON.stringify(error) || "网络请求失败",
+        })
+      }
+
+      // if (isMobile) {
+      //     Notify({ type: 'danger', Notification: error.Notification || JSON.stringify(error) || "网络请求失败" });
+      // } else {
+      //     notification.error({
+      //         Notification: error.Code || exceptionTitle,
+      //         message: error.Notification || JSON.stringify(error) || "网络请求失败",
+      //     })
+      // }
+    }
+  }
+
+  if (asyncFlag) {
+    resolve(error);
+  } else { //如果需要同步处理
+    reject(error);
+  }
+}
+
+const getMethod = (api, data, httpOptions) => {
+  let url = ''
+  if (typeof api === 'string') {
+    url = api
+  } else {
+    url = {
+      ...api,
+      method: 'get'
+    }
+  }
+  return http(url, data, httpOptions)
+}
+
+const postMethod = (api, data, httpOptions) => {
+  let url = ''
+  if (typeof api === 'string') {
+    url = {
+      api,
+      method: 'post'
+    }
+  } else {
+    url = {
+      ...api,
+      method: 'post'
+    }
+  }
+  return http(url, data, httpOptions)
+}
+
+const putMethod = (api, data, httpOptions) => {
+  let url = ''
+  if (typeof api === 'string') {
+    url = {
+      api,
+      method: 'put'
+    }
+  } else {
+    url = {
+      ...api,
+      method: 'put'
+    }
+  }
+  return http(url, data, httpOptions)
+}
+
+const patchMethod = (api, data, httpOptions) => {
+  let url = ''
+  if (typeof api === 'string') {
+    url = {
+      api,
+      method: 'patch'
+    }
+  } else {
+    url = {
+      ...api,
+      method: 'patch'
+    }
+  }
+  return http(url, data, httpOptions)
+}
+
+const deleteMethod = (api, data, httpOptions) => {
+  let url = ''
+  if (typeof api === 'string') {
+    url = {
+      api,
+      method: 'delete'
+    }
+  } else {
+    url = {
+      ...api,
+      method: 'delete'
+    }
+  }
+  return http(url, data, httpOptions)
+}
+
+const headMethod = (api, data, httpOptions) => {
+  let url = ''
+  if (typeof api === 'string') {
+    url = {
+      api,
+      method: 'head'
+    }
+  } else {
+    url = {
+      ...api,
+      method: 'head'
+    }
+  }
+  return http(url, data, httpOptions)
+}
+
+
+
+const install = function (Vue) {
+  Vue['http'] = http;
+  Vue.prototype['$http'] = http;
+  const aloneHttpMap = {
+    'get': getMethod,
+    'post': postMethod,
+    'put': putMethod,
+    'patch': patchMethod,
+    'delete': deleteMethod,
+    'head': headMethod,
+  }
+  Vue['axios'] = aloneHttpMap;
+
+  Vue.prototype['$axios'] = aloneHttpMap
+}
+
+const register = function ({
+  Loading,
+  Notification
+}) {
+  Vue['$Loading'] = Loading;
+  Vue['$Notification'] = Notification;
+}
+
+
+export {
+  install,
+  getUrlByApi,
+  http,
+  register
+}

@@ -2,8 +2,9 @@ const gulp = require('gulp');
 const clean = require('gulp-clean');
 const exec = require('child_process').exec;
 
-const devPath = '/Users/mac/test'
+// const devPath = '/Users/mac/test'
 // const devPath = '/Users/mac/ciic-ui'
+const devPath = '/Users/mac/shuzhou/ciic-ihr-pc'
 
 gulp.task('clean', function () {
     return gulp.src([
@@ -33,6 +34,7 @@ gulp.task('qwer', function () {
 gulp.task('deploy:copyfiles', function () {
     const sourceFiles = [
         'LICENSE',
+        'node_modules/**/*',
         'package.json',
         'README.md',
         'CHANGELOG.md',

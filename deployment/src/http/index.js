@@ -5,192 +5,380 @@ var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefau
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.register = exports.install = exports.http = exports.getUrlByApi = void 0;
 
-var _regenerator = _interopRequireDefault(require("@babel/runtime/regenerator"));
+var _defineProperty2 = _interopRequireDefault(require("@babel/runtime/helpers/defineProperty"));
 
-var _asyncToGenerator2 = _interopRequireDefault(require("@babel/runtime/helpers/asyncToGenerator"));
+var _typeof2 = _interopRequireDefault(require("@babel/runtime/helpers/typeof"));
 
 var _vue = _interopRequireDefault(require("vue"));
 
 var _axios = _interopRequireDefault(require("axios"));
 
-var _router = _interopRequireDefault(require("../router"));
+var _store = require("../store");
 
-var _store = _interopRequireDefault(require("../store"));
+var _elementUi = require("element-ui");
 
-var _errorCode = _interopRequireDefault(require("../code/errorCode"));
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
 
-var _mock = _interopRequireDefault(require("../api/mock"));
-
-var _i18n = _interopRequireDefault(require("../i18n"));
-
-var _common = _interopRequireDefault(require("../const/common.js"));
-
-var _store2 = require("../utils/store");
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = null != arguments[i] ? arguments[i] : {}; i % 2 ? ownKeys(Object(source), !0).forEach(function (key) { (0, _defineProperty2.default)(target, key, source[key]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) : ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } return target; }
 
 /**
- *
- * http配置
- *
+ * 根据API配置生成URL
+ * @param api API配置
+ * @returns 返回拼接好的完整URL
  */
-// 超时时间
-_axios.default.defaults.timeout = 30000; // 跨域请求，允许保存cookie
+var getUrlByApi = function getUrlByApi(api) {
+  var url = '';
 
-_axios.default.defaults.withCredentials = true; // 重新请求标志位，避免无限循环请求
-
-_axios.default.defaults.isRetryRequest = false;
-
-_axios.default.defaults.validateStatus = function validateStatus(status) {
-  return /^(2|3)\d{2}$/.test(status) || status === 401;
-}; // 刷新token的状态 0-未刷新 1-正在刷新 2-刷新失败
-
-
-var refreshingTokenStatus = 0;
-/**
- * 错误处理，自动跳转登录页并提示
- */
-
-function toLogin() {
-  // 清除缓存
-  _store.default.commit("SET_USER_INFO", {});
-
-  _store.default.commit("SET_ACCESS_TOKEN", "");
-
-  _store.default.commit("SET_REFRESH_TOKEN", "");
-
-  _store.default.commit("SET_ROLES", []);
-
-  _store.default.commit("SET_MENU_ROUTERS", []);
-
-  _store.default.commit("SET_MENU", []);
-
-  _store.default.commit("DEL_ALL_TAG");
-
-  localStorage.removeItem('insightDicts');
-
-  _router.default.push({
-    path: '/login'
-  });
-} // HTTPrequest拦截
-
-
-_axios.default.interceptors.request.use(function (config) {
-  var GROUP_NAME = (0, _store2.getStore)({
-    name: "GROUP_NAME"
-  });
-  config.headers['Accept-Language'] = _i18n.default.locale; //后端请求优先级配置项
-
-  config.headers['Priority-Value'] = GROUP_NAME ? GROUP_NAME : 'default'; //  if(config.url != '../serverConfig.yml'){
-  // 设置请求默认前缀
-
-  var baseApi = _common.default.serverConfig ? _common.default.serverConfig.baseApi : '';
-  config.baseURL = baseApi; //  }
-  // NProgress.start() // start progress bar
-
-  if (_store.default.getters.accessToken) {
-    if (!config.headers.Authorization) {
-      // 让每个请求携带token--['X-Token']为自定义key 请根据实际情况自行修改
-      config.headers.Authorization = "Bearer ".concat(_store.default.getters.accessToken);
-    }
+  if (typeof api === 'string') {
+    url = '/api' + api;
   }
 
-  if (_mock.default.enabled && process.env.NODE_ENV === 'development') {
-    var proxy = _mock.default.proxy;
+  return url;
+}; //请求的数据是放在body里的
 
-    for (var i = 0; i < proxy.length; i++) {
-      // 匹配到需要mock的接口，替换服务端地址为mock服务器地址
-      if (proxy[i].url === config.url && proxy[i].method === config.method) {
-        config.baseURL = _mock.default.apiPPrefix + _mock.default.repositoryId;
-        break;
+
+exports.getUrlByApi = getUrlByApi;
+var methodBodyList = ['post', 'put', 'patch'];
+
+var http = function http(api, data, httpOptions) {
+  var isMobile = window.innerWidth < 576 ? true : false;
+  var url = getUrlByApi(api);
+  var method = 'get';
+
+  if ((0, _typeof2.default)(api) == 'object' && api['method']) {
+    method = api['method'] || 'get';
+  }
+
+  if (httpOptions === true) {
+    httpOptions = {
+      wrapBody: 'request'
+    };
+  }
+
+  if (!httpOptions) httpOptions = {};
+  var axiosConfig = httpOptions.AxiosRequestConfig;
+
+  if (!axiosConfig) {
+    httpOptions.AxiosRequestConfig = {};
+    axiosConfig = httpOptions.AxiosRequestConfig;
+  }
+
+  var isDataBody = methodBodyList.includes(method.toLowerCase());
+  var user = _store.store.state.user;
+  var timestamp = Date.now();
+  var ciicHeaders = {
+    'Content-Type': 'application/json;charset=utf-8',
+    timestamp: timestamp
+  };
+
+  if (user) {
+    ciicHeaders['Authorization'] = user.accessToken || "";
+  }
+
+  axiosConfig.headers = _objectSpread(_objectSpread({}, ciicHeaders), axiosConfig.headers);
+
+  if (_store.store.state.httpCount <= 0) {
+    if (!httpOptions.loadingDisabled) {
+      if (_vue.default['$Loading']) {
+        _vue.default['$Loading'].start(); // if (isMobile) {
+        //     Toast.loading({
+        //         Notification: '加载中...',
+        //         forbidClick: true,
+        //         duration: 0
+        //     });
+        // } else {
+        //     NProgress.start();
+        // }
+
       }
     }
   }
 
-  return config;
-}, function (error) {
-  return Promise.reject(error);
-}); // HTTPresponse拦截
+  _store.store.commit('SET_HTTPCOUNT', _store.store.state.httpCount + 1);
 
+  _store.store.commit('SET_LOADING', true);
 
-_axios.default.interceptors.response.use( /*#__PURE__*/function () {
-  var _ref = (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee(data) {
-    var resultData, _data$data, msg, code, status, config, message;
+  if (isDataBody && httpOptions.wrapBody) {
+    if (typeof httpOptions.wrapBody === 'string') {
+      data = (0, _defineProperty2.default)({}, httpOptions.wrapBody, data);
+    } else {
+      data = {
+        request: data
+      };
+    }
+  }
 
-    return _regenerator.default.wrap(function _callee$(_context) {
-      while (1) {
-        switch (_context.prev = _context.next) {
-          case 0:
-            resultData = data;
-            _data$data = data.data, msg = _data$data.msg, code = _data$data.code;
-            status = data.status, config = data.config;
-            message = data.data.msg || '未知错误';
-
-            if (!(status === 401)) {
-              _context.next = 9;
-              break;
-            }
-
-            _store.default.dispatch("setRelogin", true);
-
-            toLogin();
-            _context.next = 16;
-            break;
-
-          case 9:
-            if (!(status === 200)) {
-              _context.next = 14;
-              break;
-            }
-
-            if (Number(code) > 0) {
-              // fxd 修改 解决导入时的消息提示问题
-              if (!(msg && msg.indexOf('文件导入失败') != '-1')) {
-                if (Number(code) == 204) {//流程定义key不存在时不出提示
-                } else {
-                  _vue.default.prototype.$message.error({
-                    dangerouslyUseHTMLString: true,
-                    message: msg || _errorCode.default.default,
-                    duration: 3500
-                  });
-                }
-              }
-            }
-
-            return _context.abrupt("return", resultData);
-
-          case 14:
-            _vue.default.prototype.$message.error({
-              message: message
-            });
-
-            return _context.abrupt("return", resultData);
-
-          case 16:
-          case "end":
-            return _context.stop();
+  return new Promise(function (resolve, reject) {
+    (0, _axios.default)(_objectSpread(_objectSpread({}, httpOptions.AxiosRequestConfig), {}, {
+      url: url,
+      method: method,
+      params: isDataBody ? null : data,
+      data: isDataBody ? data : null,
+      timeout: _store.store.state.siteConfig.Timeout * 1000 || 999999
+    })).then(function (res) {
+      if (httpOptions.isNotCIIC) {
+        //如果是外部接口的话直接返回
+        resolve(res.data);
+      } else {
+        if (res.data.Data !== undefined && res.data.IsSuccess === true) {
+          resolve(res.data.Data);
+        } else {
+          exceptionHandler(res.data.ErrorList, httpOptions.handleError, httpOptions.async, resolve, reject, isMobile);
         }
       }
-    }, _callee);
-  }));
+    }).catch(function (err) {
+      exceptionHandler(err, httpOptions.handleError, httpOptions.async, resolve, reject, isMobile);
+    }).finally(function () {
+      var count = _store.store.state.httpCount - 1;
 
-  return function (_x) {
-    return _ref.apply(this, arguments);
-  };
-}(), function (error) {
-  if (error && error.response) {
-    var status = error.response.status;
+      _store.store.commit('SET_HTTPCOUNT', count);
 
-    if (status) {
-      _vue.default.prototype.$message.error({
-        message: _errorCode.default[status] || _errorCode.default.default,
-        duration: 3500
-      });
+      if (count <= 0) {
+        _store.store.commit('SET_LOADING', false);
+
+        if (!httpOptions.loadingDisabled) {
+          if (_vue.default['$Loading']) {
+            _vue.default['$Loading'].done();
+          }
+        }
+      }
+    });
+  });
+};
+
+exports.http = http;
+var exceptionTitle = '请求错误';
+/**
+ * 
+ * @param error 错误示例
+ * @param handError 是否处理错误
+ * @param asyncFlag 是否支持同步
+ * @param resolve 正确处理函数
+ * @param reject 错误处理函数
+ */
+
+var exceptionHandler = function exceptionHandler(error, handError, asyncFlag, resolve, reject, isMobile) {
+  if (handError !== false) {
+    //如果需要错误处理
+    if (typeof error === 'string') {
+      if (_vue.default['$Notification']) {
+        _vue.default['$Notification'].error({
+          title: exceptionTitle,
+          message: error
+        });
+      } // if (isMobile) {
+      //     Notify({ type: 'danger', Notification: error });
+      // } else {
+      //     notification.error({
+      //         Notification: exceptionTitle,
+      //         message: error,
+      //     })
+      // }
+
+    } else if ((0, _typeof2.default)(error) === 'object') {
+      if (Array.isArray(error)) {
+        if (error.length > 0) {
+          if (error[0].Code === '400' && error[0].Msg.includes('-token')) {
+            window.localStorage.clear();
+            window.sessionStorage.clear();
+            window.location.href = window.location.href;
+          } else {
+            if (_vue.default['$Notification']) {
+              _vue.default['$Notification'].error({
+                title: error[0].Code || exceptionTitle,
+                message: error[0].Msg || error[0].Code || '其他错误'
+              });
+            }
+          } // if (isMobile) {
+          //     Notify({ type: 'danger', Notification: error[0].Msg || error[0].Code || '其他错误' });
+          // } else {
+          //     notification.error({
+          //         Notification: error[0].Code || exceptionTitle,
+          //         message: error[0].Msg || error[0].Code || '其他错误',
+          //     })
+          // }
+
+        } else {
+          if (_vue.default['$Notification']) {
+            _vue.default['$Notification'].error({
+              title: exceptionTitle,
+              message: '未知错误'
+            });
+          } // if (isMobile) {
+          //     Notify({ type: 'danger', Notification: '未知错误' });
+          // } else {
+          //     notification.error({
+          //         Notification: exceptionTitle,
+          //         message: '未知错误',
+          //     })
+          // }
+
+        }
+      } else {
+        if (_vue.default['$Notification']) {
+          _vue.default['$Notification'].error({
+            title: error.Code || exceptionTitle,
+            message: error.Notification || JSON.stringify(error) || "网络请求失败"
+          });
+        } // if (isMobile) {
+        //     Notify({ type: 'danger', Notification: error.Notification || JSON.stringify(error) || "网络请求失败" });
+        // } else {
+        //     notification.error({
+        //         Notification: error.Code || exceptionTitle,
+        //         message: error.Notification || JSON.stringify(error) || "网络请求失败",
+        //     })
+        // }
+
+      }
+    } else {
+      if (_vue.default['$Notification']) {
+        _vue.default['$Notification'].error({
+          title: error.Code || exceptionTitle,
+          message: error.Notification || JSON.stringify(error) || "网络请求失败"
+        });
+      } // if (isMobile) {
+      //     Notify({ type: 'danger', Notification: error.Notification || JSON.stringify(error) || "网络请求失败" });
+      // } else {
+      //     notification.error({
+      //         Notification: error.Code || exceptionTitle,
+      //         message: error.Notification || JSON.stringify(error) || "网络请求失败",
+      //     })
+      // }
+
     }
   }
 
-  return Promise.reject(new Error(error));
-});
+  if (asyncFlag) {
+    resolve(error);
+  } else {
+    //如果需要同步处理
+    reject(error);
+  }
+};
 
-var _default = _axios.default;
-exports.default = _default;
+var getMethod = function getMethod(api, data, httpOptions) {
+  var url = '';
+
+  if (typeof api === 'string') {
+    url = api;
+  } else {
+    url = _objectSpread(_objectSpread({}, api), {}, {
+      method: 'get'
+    });
+  }
+
+  return http(url, data, httpOptions);
+};
+
+var postMethod = function postMethod(api, data, httpOptions) {
+  var url = '';
+
+  if (typeof api === 'string') {
+    url = {
+      api: api,
+      method: 'post'
+    };
+  } else {
+    url = _objectSpread(_objectSpread({}, api), {}, {
+      method: 'post'
+    });
+  }
+
+  return http(url, data, httpOptions);
+};
+
+var putMethod = function putMethod(api, data, httpOptions) {
+  var url = '';
+
+  if (typeof api === 'string') {
+    url = {
+      api: api,
+      method: 'put'
+    };
+  } else {
+    url = _objectSpread(_objectSpread({}, api), {}, {
+      method: 'put'
+    });
+  }
+
+  return http(url, data, httpOptions);
+};
+
+var patchMethod = function patchMethod(api, data, httpOptions) {
+  var url = '';
+
+  if (typeof api === 'string') {
+    url = {
+      api: api,
+      method: 'patch'
+    };
+  } else {
+    url = _objectSpread(_objectSpread({}, api), {}, {
+      method: 'patch'
+    });
+  }
+
+  return http(url, data, httpOptions);
+};
+
+var deleteMethod = function deleteMethod(api, data, httpOptions) {
+  var url = '';
+
+  if (typeof api === 'string') {
+    url = {
+      api: api,
+      method: 'delete'
+    };
+  } else {
+    url = _objectSpread(_objectSpread({}, api), {}, {
+      method: 'delete'
+    });
+  }
+
+  return http(url, data, httpOptions);
+};
+
+var headMethod = function headMethod(api, data, httpOptions) {
+  var url = '';
+
+  if (typeof api === 'string') {
+    url = {
+      api: api,
+      method: 'head'
+    };
+  } else {
+    url = _objectSpread(_objectSpread({}, api), {}, {
+      method: 'head'
+    });
+  }
+
+  return http(url, data, httpOptions);
+};
+
+var install = function install(Vue) {
+  Vue['http'] = http;
+  Vue.prototype['$http'] = http;
+  var aloneHttpMap = {
+    'get': getMethod,
+    'post': postMethod,
+    'put': putMethod,
+    'patch': patchMethod,
+    'delete': deleteMethod,
+    'head': headMethod
+  };
+  Vue['axios'] = aloneHttpMap;
+  Vue.prototype['$axios'] = aloneHttpMap;
+};
+
+exports.install = install;
+
+var register = function register(_ref) {
+  var Loading = _ref.Loading,
+      Notification = _ref.Notification;
+  _vue.default['$Loading'] = Loading;
+  _vue.default['$Notification'] = Notification;
+};
+
+exports.register = register;
