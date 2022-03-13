@@ -110,8 +110,9 @@ const http = (api, data, httpOptions) => {
       if (httpOptions.isNotCIIC) { //如果是外部接口的话直接返回
         resolve(res.data);
       } else {
+          resolve(res)
         // if (res.data.Data !== undefined && res.data.IsSuccess === true) {
-          resolve(res.data.Data)
+          // resolve(res.data.Data)
         // } else {
         //   exceptionHandler(res.data.ErrorList, httpOptions.handleError, httpOptions.async, resolve, reject, isMobile);
         // }
