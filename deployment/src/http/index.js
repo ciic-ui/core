@@ -17,6 +17,8 @@ var _axios = _interopRequireDefault(require("axios"));
 
 var _store = require("../store");
 
+var _core = require("../core");
+
 var _elementUi = require("element-ui");
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
@@ -32,7 +34,9 @@ var getUrlByApi = function getUrlByApi(api) {
   var url = '';
 
   if (typeof api === 'string') {
-    url = '/api' + api;
+    url = api;
+  } else if ((0, _typeof2.default)(api) === 'object') {
+    url = api['api'];
   }
 
   return url;
@@ -67,16 +71,16 @@ var http = function http(api, data, httpOptions) {
 
   var isDataBody = methodBodyList.includes(method.toLowerCase());
   var user = _store.store.state.user;
+
+  var accessToken = _core.storage.session.getItem("accessToken");
+
+  console.log(accessToken, '---user.accessToken----');
   var timestamp = Date.now();
   var ciicHeaders = {
     'Content-Type': 'application/json;charset=utf-8',
+    'Authorization': "Bearer ".concat(accessToken),
     timestamp: timestamp
   };
-
-  if (user) {
-    ciicHeaders['Authorization'] = user.accessToken || "";
-  }
-
   axiosConfig.headers = _objectSpread(_objectSpread({}, ciicHeaders), axiosConfig.headers);
 
   if (_store.store.state.httpCount <= 0) {

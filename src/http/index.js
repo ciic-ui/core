@@ -3,6 +3,7 @@ import axios from 'axios';
 import {
   store
 } from '../store';
+import { storage } from "../core"
 // import NProgress from "nprogress";
 import { Notification, Loading } from 'element-ui';
 /**
@@ -13,7 +14,9 @@ import { Notification, Loading } from 'element-ui';
 const getUrlByApi = api => {
   let url = '';
   if (typeof api === 'string') {
-    url = '/api' + api
+    url = api
+  } else if (typeof api === 'object') {
+    url = api['api']; 
   }
   return url;
 }
@@ -46,17 +49,15 @@ const http = (api, data, httpOptions) => {
 
   let isDataBody = methodBodyList.includes(method.toLowerCase());
   const user = store.state.user;
+  const accessToken = storage.session.getItem("accessToken")
+  console.log(accessToken,'---user.accessToken----')
   let timestamp = Date.now();
 
   let ciicHeaders = {
     'Content-Type': 'application/json;charset=utf-8',
+    'Authorization': `Bearer ${accessToken}`,
     timestamp,
   };
-
-
-  if (user) {
-    ciicHeaders['Authorization'] = user.accessToken || "";
-  }
 
 
   axiosConfig.headers = {
@@ -109,11 +110,11 @@ const http = (api, data, httpOptions) => {
       if (httpOptions.isNotCIIC) { //如果是外部接口的话直接返回
         resolve(res.data);
       } else {
-        if (res.data.Data !== undefined && res.data.IsSuccess === true) {
+        // if (res.data.Data !== undefined && res.data.IsSuccess === true) {
           resolve(res.data.Data)
-        } else {
-          exceptionHandler(res.data.ErrorList, httpOptions.handleError, httpOptions.async, resolve, reject, isMobile);
-        }
+        // } else {
+        //   exceptionHandler(res.data.ErrorList, httpOptions.handleError, httpOptions.async, resolve, reject, isMobile);
+        // }
       }
     }).catch(err => {
       exceptionHandler(err, httpOptions.handleError, httpOptions.async, resolve, reject, isMobile);
